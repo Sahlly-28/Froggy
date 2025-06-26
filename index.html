@@ -1,0 +1,1867 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="appTitle">Froggy</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --text-color: #e0e0e0;
+            --secondary-bg: #1a1a1a;
+            --active-elements-bg: #2e2e2e;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --accent-color: #10b981;
+            --code-bg: #000000;
+            --code-text: #a0aec0;
+            --error-color: #ef4444;
+            --search-highlight-bg: rgba(16, 185, 129, 0.2);
+            --search-highlight-border: #10b981;
+            --placeholder-color: #64748b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 100vh;
+            padding: 0;
+            box-sizing: border-box;
+            color: var(--text-color);
+            overflow-y: scroll;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Froggy Header */
+        .grok-header {
+            width: 100%;
+            background-color: var(--bg-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+        .grok-logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem; /* Space between logo and new chat button */
+        }
+        .grok-logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent-color); /* Зелёный акцент */
+            text-shadow: 0 0 5px rgba(16, 185, 129, 0.2);
+        }
+        .header-right-icons {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        .icon-button {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .icon-button:hover {
+            background-color: var(--active-elements-bg);
+            color: var(--accent-color);
+        }
+        .lang-button {
+            background-color: var(--active-elements-bg);
+            color: var(--text-color);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            font-weight: 500;
+            border: 1px solid var(--border-color);
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            cursor: pointer;
+        }
+        .lang-button.active {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            border-color: var(--accent-color);
+        }
+        .lang-button:hover:not(.active) {
+            background-color: var(--active-elements-bg);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        .new-chat-button {
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+        .new-chat-button:hover {
+            background-color: var(--active-elements-bg);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: var(--accent-color);
+        }
+
+
+        /* Search input specific styles */
+        #searchInput {
+            flex-grow: 1; /* Allow search input to grow */
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.4rem 0.8rem;
+            font-size: 1rem;
+            color: var(--text-color);
+            outline: none;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+            width: 150px; /* Default width */
+            transition: width 0.3s ease-in-out;
+        }
+        #searchInput:focus {
+            border-color: var(--accent-color);
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--accent-color), 0 0 0 3px rgba(16, 185, 129, 0.3);
+        }
+        #searchInput.hidden {
+            width: 0;
+            padding: 0;
+            border: none;
+            visibility: hidden;
+        }
+
+
+        /* Main Content Wrapper - now truly full width */
+        .main-content-wrapper {
+            width: 100%;
+            padding: 0; /* Remove padding here, elements inside will handle it */
+            display: flex;
+            flex-direction: column;
+            gap: 0; /* No gap between sections if they are full width */
+            flex-grow: 1;
+            box-sizing: border-box;
+            background-color: var(--bg-color);
+            transition: background-color 0.3s ease;
+        }
+
+        /* User Info and Sound Toggle Section (global sound toggle removed from here) */
+        .user-info-and-sound {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0.5rem 2rem 0; /* Top padding 0.5, right/left 2rem, bottom 0 */
+            width: 100%;
+            gap: 0.75rem;
+            box-sizing: border-box;
+        }
+        /* userIdDisplay removed due to Firebase removal */
+
+
+        /* Chat history container - now full width */
+        .chat-history-container {
+            background-color: var(--bg-color);
+            border-radius: 0; /* No rounded corners, as it fills screen */
+            padding: 1.5rem 2rem; /* Add padding here for content within */
+            min-height: 60vh; /* Keep a minimum height */
+            max-height: calc(100vh - 150px); /* Max height relative to viewport minus header/footer/input */
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            box-shadow: none; /* No shadow, blend with background */
+            flex-grow: 1; /* Allow it to grow */
+            transition: background-color 0.3s ease;
+        }
+        @media (max-width: 768px) {
+            .chat-history-container {
+                padding: 1rem; /* Adjust padding for smaller screens */
+            }
+        }
+
+
+        /* Message bubble styles */
+        .message-bubble {
+            padding: 0.75rem 1.25rem;
+            border-radius: 10px;
+            max-width: 90%;
+            word-wrap: break-word;
+            line-height: 1.5;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .message-bubble.user {
+            background-color: var(--active-elements-bg);
+            color: var(--text-color);
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+        .message-bubble.ai {
+            background-color: var(--secondary-bg);
+            color: var(--text-color);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            border: 1px solid var(--border-color);
+        }
+        /* Style for messages that are search matches */
+        .message-bubble.search-match {
+            background-color: var(--search-highlight-bg);
+            border-color: var(--search-highlight-border);
+            box-shadow: 0 0 5px rgba(16, 185, 129, 0.5);
+        }
+
+        /* Input Area at the bottom - now full width and fixed position */
+        .ai-input-area {
+            background-color: var(--bg-color);
+            border-radius: 0; /* No rounded corners */
+            padding: 1rem 2rem; /* Add padding for content within */
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            box-shadow: 0 0 0 1px var(--border-color),
+                        0 5px 15px rgba(0, 0, 0, 0.3);
+            margin-top: 0; /* Remove top margin */
+            border-top: 1px solid var(--border-color);
+            position: sticky; /* Sticky to bottom */
+            bottom: 0;
+            width: 100%; /* Full width */
+            z-index: 999; /* Below header */
+            box-sizing: border-box; /* Include padding in width */
+            transition: background-color 0.3s ease;
+        }
+        @media (max-width: 768px) {
+            .ai-input-area {
+                padding: 1rem; /* Adjust padding for smaller screens */
+            }
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+        }
+        #aiPrompt {
+            flex-grow: 1;
+            min-height: 50px;
+            max-height: 200px;
+            resize: vertical;
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            font-size: 1.1rem;
+            color: var(--text-color);
+            outline: none;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        #aiPrompt:focus {
+            border-color: var(--accent-color);
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--accent-color), 0 0 0 3px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Removed focus-within from ai-input-area and applied to #aiPrompt instead */
+        .ai-input-area:focus-within {
+            box-shadow: 0 0 0 1px var(--border-color),
+                        0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+
+        #generateButton, #voiceInputButton {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            border: none;
+            flex-shrink: 0;
+        }
+        #generateButton:hover, #voiceInputButton:hover {
+            background-color: #0d926b; /* Чуть темнее зелёный */
+            transform: translateY(-1px);
+        }
+
+        /* Styling for DeepSearch and Code buttons in their new row */
+        .action-buttons-row {
+            display: flex;
+            gap: 0.75rem;
+            width: 100%;
+            justify-content: flex-start; /* Align buttons to the start */
+            padding-top: 0.25rem; /* Small padding above this row */
+        }
+        .action-buttons-row .action-text-button { /* Custom class for these text buttons */
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 0.5rem 1rem; /* Adjust padding for text */
+            border-radius: 8px; /* Rounded corners */
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+            flex-shrink: 0;
+            display: inline-flex; /* To align icon and text */
+            align-items: center;
+            gap: 0.25rem; /* Space between icon and text */
+        }
+        .action-buttons-row .action-text-button:hover {
+            background-color: var(--active-elements-bg);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: var(--accent-color);
+        }
+        .action-buttons-row .action-text-button.active-mode {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: var(--bg-color);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+        }
+        .action-buttons-row .action-text-button.active-mode:hover {
+            background-color: #0d926b; /* Чуть темнее зелёный */
+            border-color: #0d926b;
+            color: var(--bg-color);
+        }
+
+
+        /* Loading Spinner */
+        .loading-spinner {
+            border: 4px solid var(--active-elements-bg);
+            border-top: 4px solid var(--accent-color);
+            border-radius: 50%;
+            width: 24px; /* Меньше размер */
+            height: 24px; /* Меньше размер */
+            animation: spin 1s linear infinite;
+            display: none; /* Скрыт по умолчанию */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Global Loading Indicator (Spinner + Message) */
+        #loadingIndicator {
+            display: none; /* Скрыт по умолчанию */
+            justify-content: center; /* Центрирование содержимого */
+            align-items: center;
+            gap: 0.75rem; /* Пространство между спиннером и текстом */
+            padding-top: 0.75rem; /* Отступ сверху */
+            padding-bottom: 0.25rem; /* Отступ снизу */
+            color: var(--code-text);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: 0.75rem; /* Отступ от кнопок */
+        }
+
+        /* Code Block Styling */
+        .code-block-wrapper {
+            background-color: var(--bg-color);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08),
+                        0 4px 10px rgba(0, 0, 0, 0.6);
+        }
+        .code-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--code-bg);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--code-text);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .code-block-header-actions button {
+            background: none;
+            border: none;
+            color: var(--code-text);
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            font-size: 0.85rem;
+        }
+        .code-block-header-actions button:hover {
+            background-color: #1f2937;
+            color: var(--text-color);
+        }
+        pre {
+            background-color: var(--bg-color);
+            color: var(--code-text);
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 0;
+            border-radius: 0;
+            box-shadow: none;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace; /* Моноширинный шрифт для кода */
+        }
+        pre.collapsed {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            overflow: hidden;
+        }
+        pre.wrapped code {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        code {
+            font-family: inherit; /* Использует шрифт родительского pre */
+            font-size: 0.98rem;
+            line-height: 1.5;
+            display: block;
+        }
+
+        /* Headings & Text */
+        h1, h2, h3 { color: var(--accent-color); text-shadow: 0 0 8px rgba(16, 185, 129, 0.3); }
+        h1 { font-size: 2.25rem; }
+        h2 { font-size: 1.75rem; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        h3 { font-size: 1.25rem; margin-top: 1.2rem; margin-bottom: 0.4rem; }
+        p { margin-bottom: 0.8rem; color: var(--text-color); }
+        strong { color: var(--text-color); }
+        em { font-style: italic; color: var(--code-text); }
+        ul { list-style: disc; margin-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+        li { margin-bottom: 0.4rem; color: var(--text-color); }
+
+        /* Initial Greeting Style */
+        #initialGreeting {
+            font-size: 2.5rem; /* Large size */
+            font-weight: 800; /* Extra bold */
+            text-align: center;
+            margin-top: auto; /* Push to center vertically */
+            margin-bottom: 1rem;
+            background-image: linear-gradient(to right, #10b981, #6366f1); /* Gradient colors */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent; /* Fallback for browsers not supporting background-clip */
+            letter-spacing: -0.05em; /* Slightly tighter letter spacing */
+            padding-bottom: 1rem; /* Space below it */
+            line-height: 1.2;
+        }
+
+
+        /* Froggy Footer */
+        .grok-footer {
+            width: 100%;
+            background-color: var(--bg-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+            box-shadow: 0 -2px 10px var(--shadow-color);
+            margin-top: auto;
+            z-index: 1000;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+        .footer-left {
+            display: flex; /* Make it a flex container */
+            align-items: center; /* Vertically align items */
+            gap: 0.75rem; /* Space between text and buttons */
+            font-size: 0.9rem;
+            color: var(--code-text);
+        }
+        .footer-center-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .footer-icon-button {
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            color: var(--code-text);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        .footer-icon-button:hover {
+            background-color: var(--active-elements-bg);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: var(--text-color);
+        }
+        .footer-button {
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            color: var(--code-text);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        .footer-button:hover {
+            background-color: var(--active-elements-bg);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: var(--text-color);
+        }
+        .footer-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+            color: var(--code-text);
+        }
+        .footer-right .footer-icon-button {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+        }
+        .footer-right .footer-icon-button:hover {
+            background-color: #0d926b; /* Чуть темнее зелёный */
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+        }
+
+        /* Placeholder text color */
+        ::placeholder {
+            color: var(--placeholder-color);
+            opacity: 1;
+        }
+
+        /* Override specific classes for dark theme where Tailwind defaults conflict */
+        .text-gray-700 { color: var(--text-color); }
+        .text-gray-600 { color: var(--code-text); }
+        .text-red-500 { color: var(--error-color); }
+
+        /* Added for "Terminal Output" imitation */
+        .terminal-output {
+            background-color: var(--code-bg);
+            color: #0f0; /* Green for terminal */
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+            box-shadow: inset 0 0 5px rgba(0, 255, 0, 0.1);
+        }
+        .terminal-output.error {
+            color: #f00; /* Red for terminal errors */
+            border-color: rgba(255, 0, 0, 0.2);
+            box-shadow: inset 0 0 5px rgba(255, 0, 0, 0.1);
+        }
+
+        /* Settings Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: var(--bg-color);
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px var(--shadow-color);
+            width: 90%;
+            max-width: 500px;
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            border: 1px solid var(--border-color);
+        }
+        .modal-overlay.visible .modal-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+        .modal-header h2 {
+            color: var(--accent-color);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        .modal-close-button {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .modal-close-button:hover {
+            color: var(--accent-color);
+        }
+        .modal-body label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+        .modal-body input[type="color"] {
+            width: 100%;
+            height: 40px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 0;
+            cursor: pointer;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-color: transparent;
+        }
+        .modal-body input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        .modal-body input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 4px;
+        }
+        .modal-body input[type="color"]::-moz-color-swatch-wrapper {
+            padding: 0;
+        }
+        .modal-body input[type="color"]::-moz-color-swatch {
+            border: none;
+            border-radius: 4px;
+        }
+        .modal-body div {
+            margin-bottom: 1rem;
+        }
+        /* New styling for checkbox */
+        .modal-body .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .modal-body .checkbox-container input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: var(--secondary-bg);
+            cursor: pointer;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            position: relative;
+            outline: none;
+        }
+        .modal-body .checkbox-container input[type="checkbox"]:checked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        .modal-body .checkbox-container input[type="checkbox"]:checked::after {
+            content: '✔';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--bg-color); /* Checkmark color */
+            font-size: 14px;
+            line-height: 1;
+        }
+        .modal-body .checkbox-container label {
+            margin-bottom: 0; /* Override default label margin */
+            font-weight: normal; /* Less bold for a setting option */
+        }
+
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+        .modal-button {
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+            border: 1px solid var(--border-color);
+            background-color: var(--active-elements-bg);
+            color: var(--text-color);
+        }
+        .modal-button:hover {
+            background-color: #3a3a3a;
+            border-color: rgba(255, 255, 255, 0.2);
+            color: var(--accent-color);
+        }
+        .modal-button.primary {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            border-color: var(--accent-color);
+        }
+        .modal-button.primary:hover {
+            background-color: #0d926b;
+            border-color: #0d926b;
+            color: var(--bg-color);
+        }
+
+        /* New styles for Listen/Copy buttons in AI message bubbles */
+        .ai-message-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            justify-content: flex-start; /* Align with AI message start */
+        }
+        .ai-message-actions .action-button {
+            background: none; /* No background */
+            border: none; /* No border initially */
+            color: var(--code-text); /* Default color */
+            padding: 0.3rem 0.6rem;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: color 0.2s ease, background-color 0.2s ease; /* Transition only color and background */
+        }
+        .ai-message-actions .action-button:hover {
+            background-color: var(--active-elements-bg); /* Subtle background on hover */
+            color: var(--accent-color); /* Accent color on hover */
+        }
+
+        /* Login Screen Styles (kept for reference, but hidden by removing HTML block) */
+        #loginContainer {
+            display: none; /* Always hidden */
+        }
+
+    </style>
+    <!-- Firebase SDK CDN imports removed -->
+    <script type="module">
+        // Firebase imports and related initialization removed
+
+        let chatHistory = []; // Stores the conversation history for multi-turn interaction
+        let currentLanguage = localStorage.getItem('language') || 'ru'; // Default to Russian or load from local storage
+        let currentSearchQuery = ''; // Stores the active search query
+
+        let voicesLoaded = false;
+        let selectedVoice = null;
+        // isSoundEnabled is now controlled by checkbox in settings, loaded from localStorage
+        let isSoundEnabled = localStorage.getItem('isSoundEnabled') === 'true';
+
+        let isNextMessageCodeRequest = false; // Flag to indicate if the next user message is a code request
+        const DEEP_SEARCH_TRIGGER_PREFIX = "[DEEP_SEARCH] "; // Hidden prefix to trigger deep search logic
+
+        let currentActiveModeButton = null; // Stores reference to the currently active DeepSearch/Code button
+
+        // Translations object
+        const translations = {
+            'en': {
+                'appTitle': 'Froggy',
+                'loadingHistory': 'Loading chat history...', // Will no longer be needed/used, but kept for consistency with current code
+                'initialGreeting': 'Start your first dialogue with Froggy!',
+                'thinkingResponse': 'AI is thinking...',
+                'apiError': 'Could not get AI response. Please try again.',
+                'fetchError': 'An error occurred:',
+                'voiceInputPlaceholder': 'Voice Input: This feature would require microphone access and integration with a speech recognition API!',
+                'deepSearchPlaceholder': 'Deep AI Search: This feature requires integration with external knowledge sources (Stack Overflow, GitHub, MDN, Python Docs) and intelligent analysis mechanisms!',
+                'randomPlaceholder': 'Random Code/Concept: This feature would generate a random code snippet or programming concept explanation!',
+                'howCanFroggyHelp': 'How can Froggy help?',
+                'scrollToTop': 'Scroll to Top',
+                'copied': 'Copied!',
+                'copy': 'Copy',
+                'error': 'Error!',
+                'collapse': 'Collapse',
+                'expand': 'Expand',
+                'wrap': 'Wrap',
+                'unwrap': 'Unwrap',
+                'aiName': 'I am your AI programming assistant and created by 1 developer.',
+                'searchPlaceholder': 'Search messages...',
+                'froggyIsWriting': 'Froggy is writing...',
+                'settingsTitle': 'Interface Settings',
+                'backgroundColor': 'Background Color',
+                'textColor': 'Text Color',
+                'enableSound': 'Enable Sound',
+                'applySettings': 'Apply',
+                'close': 'Close',
+                'searchNoResults': 'No messages found matching your search.',
+                'listen': 'Listen',
+                'developer': 'Developer',
+                'like': 'Like',
+                'dislike': 'Dislike',
+                'soundOn': 'Sound On',
+                'soundOff': 'Sound Off',
+                'codeRequestPrompt': 'What code do you need? (e.g., \'Python function for array sorting\', \'React component for a button\')',
+                'deepSearchTitle': 'DeepSearch',
+                'codeButtonTitle': 'Code',
+                'randomButtonTitle': 'Random',
+                'newChat': 'New Chat',
+                // Removed all login/profile related translations
+            },
+            'ru': {
+                'appTitle': 'Froggy',
+                'loadingHistory': 'Загрузка истории чата...', // Will no longer be needed/used, but kept for consistency with current code
+                'initialGreeting': 'Начните свой первый диалог с Froggy!',
+                'thinkingResponse': 'ИИ обдумывает ответ...',
+                'apiError': 'Не удалось получить ответ от ИИ. Пожалуйста, попробуйте еще раз.',
+                'fetchError': 'Произошла ошибка:',
+                'voiceInputPlaceholder': 'Голосовой ввод: Эта функция потребует доступа к микрофону и интеграции с API распознавания речи!',
+                'deepSearchPlaceholder': 'Глубокий ИИ-поиск: Эта функция требует интеграции с внешними источниками знаний (Stack Overflow, GitHub, MDN, Python Docs) и механизмов интеллектуального анализа!',
+                'randomPlaceholder': 'Случайный код/концепция: Эта функция сгенерирует случайный фрагмент кода или объяснение концепции программирования!',
+                'howCanFroggyHelp': 'Как Froggy может помочь?',
+                'scrollToTop': 'Наверх',
+                'copied': 'Скопировано!',
+                'copy': 'Копировать',
+                'error': 'Ошибка!',
+                'collapse': 'Свернуть',
+                'expand': 'Развернуть',
+                'wrap': 'Перенос',
+                'unwrap': 'Без переноса',
+                'aiName': 'Я — твой ИИ-помощник по программированию и создан 1 разработчиком.',
+                'searchPlaceholder': 'Искать сообщения...',
+                'froggyIsWriting': 'Froggy пишет...',
+                'settingsTitle': 'Настройки интерфейса',
+                'backgroundColor': 'Цвет фона',
+                'textColor': 'Цвет текста',
+                'enableSound': 'Включить звук',
+                'applySettings': 'Применить',
+                'close': 'Закрыть',
+                'searchNoResults': 'Сообщения по вашему запросу не найдены.',
+                'listen': 'Послушать',
+                'developer': 'Разработчик',
+                'like': 'Нравится',
+                'dislike': 'Не нравится',
+                'soundOn': 'Звук включен',
+                'soundOff': 'Звук выключен',
+                'codeRequestPrompt': 'Какой код вам нужен? (например, \'функция Python для сортировки массива\', \'компонент React для кнопки\')',
+                'deepSearchTitle': 'DeepSearch',
+                'codeButtonTitle': 'Code',
+                'randomButtonTitle': 'Random',
+                'newChat': 'Новый чат',
+                // Removed all login/profile related translations
+            }
+        };
+
+        window.onload = async function() {
+            try {
+                // Load voices for speech synthesis
+                loadVoices();
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.onvoiceschanged = loadVoices;
+                }
+
+                // Apply initial language settings and saved preferences
+                loadAndApplySettings(); // Load color settings first
+                setLanguage(currentLanguage);
+
+                // Display initial greeting directly as there's no auth/history to load from Firebase
+                showInitialGreeting();
+
+                // Ensure main content is visible
+                document.querySelector('.main-content-wrapper').style.display = 'flex';
+                document.querySelector('.grok-header').style.display = 'flex';
+                document.querySelector('.grok-footer').style.display = 'flex';
+
+
+                // AI Assistant button listener
+                document.getElementById('generateButton').addEventListener('click', sendMessage);
+                document.getElementById('aiPrompt').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) { // Send on Enter, allow Shift+Enter for new line
+                        e.preventDefault(); // Prevent default new line
+                        sendMessage();
+                    }
+                });
+
+                // Input area button actions
+                document.getElementById('voiceInputButton').addEventListener('click', () => {
+                    alert(translations[currentLanguage].voiceInputPlaceholder);
+                    console.log("Voice input button clicked (placeholder)");
+                });
+                document.getElementById('deepSearchButton').addEventListener('click', (event) => {
+                    setActiveModeButton(event.currentTarget);
+                    triggerDeepSearch();
+                });
+                document.getElementById('codeButton').addEventListener('click', (event) => {
+                    setActiveModeButton(event.currentTarget);
+                    triggerCodeGenerationRequest();
+                });
+
+                // Language switch listeners
+                document.getElementById('langEn').addEventListener('click', () => setLanguage('en'));
+                document.getElementById('langRu').addEventListener('click', () => setLanguage('ru'));
+
+                // Search functionality
+                document.getElementById('searchToggleButton').addEventListener('click', toggleSearchInput);
+                document.getElementById('searchInput').addEventListener('input', performSearch);
+
+                // Settings modal listeners
+                document.getElementById('settingsButton').addEventListener('click', showSettingsModal);
+                document.getElementById('closeSettingsModal').addEventListener('click', hideSettingsModal);
+                document.getElementById('applySettingsButton').addEventListener('click', applySettings);
+
+                // **УДАЛЕН** слушатель для кнопки профиля, так как кнопка удалена из HTML.
+                // Если вы когда-либо решите вернуть кнопку профиля, вам нужно будет
+                // раскомментировать эту строку и убедиться, что соответствующий элемент HTML существует:
+                // document.getElementById('profileButton').addEventListener('click', () => {
+                //     alert(translations[currentLanguage].profilePlaceholder);
+                // });
+
+
+                // New Chat button in header will now only clear chat history
+                document.getElementById('newChatButton').addEventListener('click', async () => {
+                    if (confirm(currentLanguage === 'ru' ? 'Вы уверены, что хотите начать новый чат? Текущая история будет очищена.' : 'Are you sure you want to start a new chat? This will clear the current history.')) {
+                        chatHistory = []; // Clear chat history locally
+                        renderChatHistory(); // Render initial greeting
+                        console.log("New chat started.");
+                    }
+                });
+
+                // Initialize sound checkbox in settings when modal opens
+                document.getElementById('settingsModalOverlay').addEventListener('transitionend', (e) => {
+                    if (e.propertyName === 'opacity' && document.getElementById('settingsModalOverlay').classList.contains('visible')) {
+                        document.getElementById('enableSoundCheckbox').checked = isSoundEnabled;
+                    }
+                });
+
+            } catch (error) {
+                // Simplified error handling as no Firebase init is expected to fail now
+                console.error("Application initialization error:", error);
+                const chatHistoryContainer = document.getElementById('chatHistoryContainer');
+                // Ensure chatHistoryContainer exists before trying to set its innerHTML
+                if (chatHistoryContainer) {
+                    chatHistoryContainer.innerHTML = `<p class="text-red-500">${translations[currentLanguage].fetchError} ${error.message}</p>`;
+                }
+            }
+        };
+
+        /**
+         * Sets the currently active mode button (DeepSearch or Code) and updates its visual state.
+         * Deactivates any previously active button.
+         * @param {HTMLElement} button - The button element that was just clicked to activate a mode.
+         */
+        function setActiveModeButton(button) {
+            // Remove active class from previous button if it exists
+            if (currentActiveModeButton && currentActiveModeButton !== button) {
+                currentActiveModeButton.classList.remove('active-mode');
+            }
+            // Add active class to the new button
+            button.classList.add('active-mode');
+            currentActiveModeButton = button;
+        }
+
+        /**
+         * Clears the active mode button visual state.
+         */
+        function clearActiveModeButton() {
+            if (currentActiveModeButton) {
+                currentActiveModeButton.classList.remove('active-mode');
+                currentActiveModeButton = null;
+            }
+        }
+
+        /**
+         * Loads and selects a voice for speech synthesis.
+         */
+        function loadVoices() {
+            if (!('speechSynthesis' in window)) {
+                console.warn("SpeechSynthesis API not supported.");
+                return;
+            }
+            const voices = window.speechSynthesis.getVoices();
+            voicesLoaded = true;
+            console.log("Available voices:", voices);
+
+            // Try to find a specific male voice first based on current language
+            const targetLang = currentLanguage === 'ru' ? 'ru-RU' : 'en-US';
+            const targetGenderKeywords = ['male', 'boy', 'мужской', 'мальчик'];
+
+            selectedVoice = voices.find(voice =>
+                voice.lang.startsWith(targetLang) &&
+                targetGenderKeywords.some(keyword => voice.name.toLowerCase().includes(keyword))
+            );
+
+            // Fallback: any voice for the target language (prioritize local voices)
+            if (!selectedVoice) {
+                selectedVoice = voices.find(voice => voice.lang.startsWith(targetLang) && voice.localService);
+            }
+            if (!selectedVoice) {
+                selectedVoice = voices.find(voice => voice.lang.startsWith(targetLang));
+            }
+
+
+            // Final fallback: any voice
+            if (!selectedVoice && voices.length > 0) {
+                selectedVoice = voices[0];
+            }
+
+            if (selectedVoice) {
+                console.log("Selected voice:", selectedVoice.name, selectedVoice.lang);
+            } else {
+                console.warn("No suitable voice found for language:", targetLang);
+            }
+        }
+
+
+        /**
+         * Loads and applies saved interface settings from localStorage.
+         */
+        function loadAndApplySettings() {
+            const savedBgColor = localStorage.getItem('bgColor');
+            const savedTextColor = localStorage.getItem('textColor');
+            const savedIsSoundEnabled = localStorage.getItem('isSoundEnabled'); // Load sound setting
+
+            if (savedBgColor) {
+                document.documentElement.style.setProperty('--bg-color', savedBgColor);
+                // Adjust derived colors based on the new background color
+                document.documentElement.style.setProperty('--secondary-bg', adjustColor(savedBgColor, 10));
+                document.documentElement.style.setProperty('--active-elements-bg', adjustColor(savedBgColor, 20));
+                document.documentElement.style.setProperty('--code-bg', adjustColor(savedBgColor, -10));
+            }
+            if (savedTextColor) {
+                document.documentElement.style.setProperty('--text-color', savedTextColor);
+                // Adjust derived colors based on the new text color
+                document.documentElement.style.setProperty('--code-text', adjustColor(savedTextColor, -50));
+                document.documentElement.style.setProperty('--placeholder-color', adjustColor(savedTextColor, -30));
+            }
+
+            // Apply sound setting
+            if (savedIsSoundEnabled !== null) {
+                isSoundEnabled = savedIsSoundEnabled === 'true';
+            }
+        }
+
+        /**
+         * Adjusts the brightness of a hex color.
+         * @param {string} hex - The hex color string (e.g., "#RRGGBB").
+         * @param {number} percent - The percentage to adjust brightness (positive for lighter, negative for darker).
+         * @returns {string} The adjusted hex color string.
+         */
+        function adjustColor(hex, percent) {
+            let f = parseInt(hex.slice(1), 16);
+            let t = percent < 0 ? 0 : 255;
+            let p = percent < 0 ? percent * -1 : percent;
+
+            let R = f >> 16;
+            let G = (f >> 8) & 0x00FF;
+            let B_val = f & 0x0000FF; // Renamed to avoid redeclaration
+
+            return "#" + (0x1000000 +
+                (Math.round((t - R) * p / 100) + R) * 0x10000 +
+                (Math.round((t - G) * p / 100) + G) * 0x100 +
+                (Math.round((t - B_val) * p / 100) + B_val)
+            ).toString(16).slice(1);
+        }
+
+        /**
+         * Shows the settings modal.
+         */
+        function showSettingsModal() {
+            const modalOverlay = document.getElementById('settingsModalOverlay');
+            const bgColorInput = document.getElementById('bgColorInput');
+            const textColorInput = document.getElementById('textColorInput');
+            const enableSoundCheckbox = document.getElementById('enableSoundCheckbox');
+
+            // Set current values to color pickers
+            bgColorInput.value = getComputedStyle(document.documentElement).getPropertyValue('--bg-color').trim();
+            textColorInput.value = getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim();
+            enableSoundCheckbox.checked = isSoundEnabled; // Set checkbox based on current state
+
+            modalOverlay.classList.add('visible');
+        }
+
+        /**
+         * Hides the settings modal.
+         */
+        function hideSettingsModal() {
+            document.getElementById('settingsModalOverlay').classList.remove('visible');
+        }
+
+        /**
+         * Applies the selected settings and saves them to localStorage.
+         */
+        function applySettings() {
+            const newBgColor = document.getElementById('bgColorInput').value;
+            const newTextColor = document.getElementById('textColorInput').value;
+            const newIsSoundEnabled = document.getElementById('enableSoundCheckbox').checked;
+
+            localStorage.setItem('bgColor', newBgColor);
+            localStorage.setItem('textColor', newTextColor);
+            localStorage.setItem('isSoundEnabled', newIsSoundEnabled);
+
+            isSoundEnabled = newIsSoundEnabled; // Update global variable
+            if (!isSoundEnabled) {
+                window.speechSynthesis.cancel(); // Stop any ongoing speech if sound is turned off
+            }
+
+            loadAndApplySettings(); // Re-apply to update all derived colors and the sound state
+            hideSettingsModal();
+        }
+
+        /**
+         * Sets the language of the UI.
+         * @param {string} lang - 'en' or 'ru'.
+         */
+        function setLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('language', lang); // Save preference
+
+            // Update document title
+            document.title = translations[lang].appTitle;
+
+            // Update elements with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    element.textContent = translations[lang][key];
+                }
+            });
+
+            // Update specific placeholders and titles
+            document.getElementById('aiPrompt').placeholder = (lang === 'ru' ? 'Напишите функцию Python для расчета факториала... Объясните замыкания в JavaScript...' : 'Write a Python function to calculate factorial... Explain closures in JavaScript...');
+            document.getElementById('generateButton').title = (lang === 'ru' ? 'Отправить' : 'Send');
+            document.getElementById('voiceInputButton').title = translations[lang].voiceInputPlaceholder.split(':')[0]; // Just the title part
+            document.getElementById('searchToggleButton').title = translations[lang].searchPlaceholder.split(':')[0]; // Just the title part
+            document.getElementById('settingsButton').title = translations[lang].settingsTitle;
+
+            document.getElementById('deepSearchButton').title = translations[lang].deepSearchTitle; // New
+            document.getElementById('codeButton').title = translations[lang].codeButtonTitle; // New
+
+            document.getElementById('loadingMessage').textContent = translations[lang].froggyIsWriting;
+            document.querySelector('.footer-right .footer-button-link').textContent = translations[lang].developer; // Update developer link text
+
+            // Update new chat button text
+            if (document.getElementById('newChatButton')) document.getElementById('newChatButton').textContent = translations[lang].newChat;
+
+            // Update dynamic texts in code blocks
+            document.querySelectorAll('[data-i18n-dynamic-text]').forEach(element => {
+                const key = element.getAttribute('data-i18n-dynamic-text');
+                if (translations[lang][key]) {
+                    element.textContent = translations[lang][key];
+                }
+            });
+
+            // Update settings modal text
+            if (document.getElementById('settingsModalTitle')) document.getElementById('settingsModalTitle').textContent = translations[lang].settingsTitle;
+            if (document.getElementById('bgColorLabel')) document.getElementById('bgColorLabel').textContent = translations[lang].backgroundColor;
+            if (document.getElementById('textColorLabel')) document.getElementById('textColorLabel').textContent = translations[lang].textColor;
+            if (document.getElementById('enableSoundLabel')) document.getElementById('enableSoundLabel').textContent = translations[lang].enableSound;
+            if (document.getElementById('applySettingsButton')) document.getElementById('applySettingsButton').textContent = translations[lang].applySettings;
+            if (document.getElementById('closeSettingsModal')) document.getElementById('closeSettingsModal').textContent = translations[lang].close;
+
+            // Update language buttons active state
+            document.getElementById('langEn').classList.toggle('active', lang === 'en');
+            document.getElementById('langRu').classList.toggle('active', lang === 'ru');
+
+            renderChatHistory();
+            loadVoices();
+        }
+
+        /**
+         * Toggles the visibility of the search input field.
+         */
+        function toggleSearchInput() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.classList.toggle('hidden');
+            if (searchInput.classList.contains('hidden')) {
+                searchInput.value = ''; // Clear search when hidden
+                currentSearchQuery = ''; // Clear active search query
+                renderChatHistory(); // Re-render all messages
+            } else {
+                searchInput.focus();
+            }
+        }
+
+        /**
+         * Performs a search on the chat history and updates the displayed messages.
+         */
+        function performSearch() {
+            currentSearchQuery = document.getElementById('searchInput').value.trim();
+            renderChatHistory(true); // true indicates search mode
+        }
+
+
+        /**
+         * Loads chat history. No longer uses Firebase, just shows initial greeting.
+         */
+        async function loadChatHistory() {
+            showInitialGreeting();
+        }
+
+        /**
+         * Displays the initial gradient greeting message.
+         */
+        function showInitialGreeting() {
+            const chatHistoryContainer = document.getElementById('chatHistoryContainer');
+            // Check if greeting already exists to avoid duplication
+            if (!document.getElementById('initialGreeting')) {
+                const greetingDiv = document.createElement('div');
+                greetingDiv.id = 'initialGreeting';
+                greetingDiv.textContent = translations[currentLanguage].initialGreeting;
+                chatHistoryContainer.appendChild(greetingDiv);
+                // Ensure chatHistoryContainer is centered for the greeting
+                chatHistoryContainer.style.justifyContent = 'center';
+                chatHistoryContainer.style.alignItems = 'center';
+            }
+        }
+
+        /**
+         * Renders the chat history (or filtered history if in search mode).
+         * @param {boolean} isSearchMode - If true, only render messages matching `currentSearchQuery`.
+         */
+        function renderChatHistory(isSearchMode = false) {
+            const chatHistoryContainer = document.getElementById('chatHistoryContainer');
+            chatHistoryContainer.innerHTML = ''; // Clear existing messages
+            chatHistoryContainer.style.justifyContent = ''; // Reset alignment
+            chatHistoryContainer.style.alignItems = ''; // Reset alignment
+
+            let messagesToDisplay = chatHistory;
+            if (isSearchMode && currentSearchQuery) {
+                messagesToDisplay = chatHistory.filter(msg =>
+                    msg.parts[0].text.toLowerCase().includes(currentSearchQuery.toLowerCase())
+                );
+            }
+
+            if (messagesToDisplay.length === 0 && !isSearchMode && !currentSearchQuery) {
+                 showInitialGreeting();
+            } else if (messagesToDisplay.length === 0 && (isSearchMode || currentSearchQuery)) {
+                 chatHistoryContainer.innerHTML = `<p class="text-gray-600 text-center">${translations[currentLanguage].searchNoResults}</p>`;
+            }
+            else {
+                messagesToDisplay.forEach(msg => {
+                    // Pass current search query to appendMessageToChat for potential highlighting
+                    appendMessageToChat(msg.parts[0].text, msg.role, true, '', isSearchMode ? currentSearchQuery : '');
+                });
+            }
+            chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
+        }
+
+
+        /**
+         * Saves the current chat history for the user to Firestore.
+         * This function is now empty as Firestore is removed.
+         */
+        async function saveChatHistory() {
+            console.log("Saving chat history (Firebase removed, so no persistence).");
+        }
+
+        /**
+         * Converts text to speech.
+         * @param {string} text - The text to be spoken.
+         * @param {string} lang - The language of the text (e.g., 'ru-RU').
+         */
+        function speakResponse(text, lang = 'ru-RU') {
+            if (!isSoundEnabled || !('speechSynthesis' in window) || !voicesLoaded) {
+                console.warn("SpeechSynthesis API not supported, voices not loaded, or sound is disabled.");
+                return;
+            }
+            // Stop any ongoing speech before starting a new one
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+
+            // Remove emojis from text before speaking
+            const textToSpeak = text.replace(/(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g, '');
+
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = lang; // Set language based on current app language
+            utterance.rate = 1.0; // Speed of speech
+            utterance.pitch = 1.0; // Pitch of speech
+
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+            } else {
+                 console.warn("No specific voice selected, using default for language:", lang);
+            }
+
+
+            window.speechSynthesis.speak(utterance);
+            console.log("Speaking AI response (text sent to API):", textToSpeak); // Log what is being spoken
+        }
+
+        /**
+         * Sends a message to the AI and displays the response.
+         */
+        async function sendMessage() {
+            const promptInput = document.getElementById('aiPrompt');
+            const userMessageText = promptInput.value.trim();
+            const chatHistoryContainer = document.getElementById('chatHistoryContainer');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const initialGreetingElement = document.getElementById('initialGreeting');
+
+            if (!userMessageText) {
+                return;
+            }
+
+            // Clear active mode button visual feedback
+            clearActiveModeButton();
+
+            // Remove initial greeting if it exists
+            if (initialGreetingElement) {
+                initialGreetingElement.remove();
+                // Reset chatHistoryContainer alignment after greeting is removed
+                chatHistoryContainer.style.justifyContent = '';
+                chatHistoryContainer.style.alignItems = '';
+            }
+
+            // 1. Add user message to history and display
+            chatHistory.push({ role: "user", parts: [{ text: userMessageText }] });
+            appendMessageToChat(userMessageText, 'user');
+            promptInput.value = ''; // Clear input
+
+            // 2. Create and append the AI response placeholder immediately
+            const aiResponsePlaceholder = document.createElement('div');
+            aiResponsePlaceholder.classList.add('message-bubble', 'ai');
+            const aiContentDiv = document.createElement('div'); // This will hold the actual AI response content
+            aiContentDiv.innerHTML = `<p class="text-gray-500 italic">${translations[currentLanguage].thinkingResponse}</p>`;
+            aiResponsePlaceholder.appendChild(aiContentDiv);
+            chatHistoryContainer.appendChild(aiResponsePlaceholder);
+            chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
+
+
+            // 3. Show global loading indicator
+            loadingIndicator.style.display = 'flex';
+
+            let aiResponseText = '';
+            let geminiPromptContent = '';
+
+            if (isNextMessageCodeRequest) {
+                isNextMessageCodeRequest = false; // Reset flag immediately
+                // User's message is the code request
+                geminiPromptContent = `Generate code for: ${userMessageText}. Also provide important explanations for the code.`;
+            } else if (userMessageText.startsWith(DEEP_SEARCH_TRIGGER_PREFIX)) {
+                const actualPrompt = userMessageText.substring(DEEP_SEARCH_TRIGGER_PREFIX.length).trim();
+                geminiPromptContent = `Perform a deep search on documentation, Stack Overflow, and GitHub for: ${actualPrompt}. Summarize relevant information and provide code examples if applicable.`;
+            } else {
+                // Normal conversation or identity query
+                const lowerCaseUserMessage = userMessageText.toLowerCase();
+                const identityKeywordsRu = ["кто ты", "кто твой создатель", "твое имя", "привет", "как зовут"];
+                const identityKeywordsEn = ["who are you", "who created you", "what is your name", "what's your name", "your name", "hello", "hi"];
+
+                let isIdentityQuery = false;
+                for (const keyword of identityKeywordsRu) { if (lowerCaseUserMessage.includes(keyword)) { isIdentityQuery = true; break; } }
+                if (!isIdentityQuery) { for (const keyword of identityKeywordsEn) { if (lowerCaseUserMessage.includes(keyword)) { isIdentityQuery = true; break; } } }
+
+                if (isIdentityQuery) {
+                    aiResponseText = translations[currentLanguage].aiName;
+                    console.log("Generated AI Identity Response:", aiResponseText);
+                    // Bypass Gemini call if identity query is handled locally
+                    chatHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
+                    aiContentDiv.innerHTML = convertMarkdownToHtml(aiResponseText); // Update the placeholder's content
+                    speakResponse(aiResponseText, currentLanguage === 'ru' ? 'ru-RU' : 'en-US');
+                    loadingIndicator.style.display = 'none';
+                    chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
+                    return; // Exit early as response is handled
+                } else {
+                    // Normal chat prompt, use full chat history for context
+                    geminiPromptContent = chatHistory; // Pass full history to Gemini
+                }
+            }
+
+            // Now, make the Gemini API call using geminiPromptContent
+            try {
+                const payload = { contents: Array.isArray(geminiPromptContent) ? geminiPromptContent : [{ role: "user", parts: [{ text: geminiPromptContent }] }] };
+                // === Вставьте ваш ключ API Gemini здесь ===
+                // Вы можете получить его по адресу: https://aistudio.google.com/app/apikey
+                // Убедитесь, что ключ находится внутри кавычек.
+                const apiKey = "AIzaSyDxTk5blVWaRU1MTGEryLGRCUOZk4IzBQY"; // <--- Вставьте сюда ваш ключ API
+                // ======================================
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                console.log("Raw Gemini API Response Object:", result);
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    aiResponseText = result.candidates[0].content.parts[0].text;
+                    console.log("Extracted AI Response Text from Gemini:", aiResponseText);
+                } else {
+                    aiResponseText = translations[currentLanguage].apiError;
+                    console.error("Gemini API response structure unexpected or empty content.");
+                }
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                aiResponseText = `${translations[currentLanguage].fetchError} ${error.message}.`;
+            }
+
+            // After getting response, update chat history and UI
+            chatHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
+            aiContentDiv.innerHTML = convertMarkdownToHtml(aiResponseText); // Update the placeholder's content
+            speakResponse(aiResponseText, currentLanguage === 'ru' ? 'ru-RU' : 'en-US');
+
+            // Add action buttons (Listen, Copy, Like, Dislike)
+            if (aiResponseText) {
+                const actionsDiv = document.createElement('div');
+                actionsDiv.classList.add('ai-message-actions');
+
+                const listenButton = document.createElement('button');
+                listenButton.classList.add('action-button');
+                listenButton.title = translations[currentLanguage].listen;
+                listenButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 4L7 9H4C3.45 9 3 9.45 3 10V14C3 14.55 3.45 15 4 15H7L12 20V4ZM14 8V16C16.14 15.35 17.79 13.88 18.5 12C17.79 10.12 16.14 8.65 14 8Z"/></svg>`;
+                listenButton.onclick = () => speakResponse(aiResponseText, currentLanguage === 'ru' ? 'ru-RU' : 'en-US');
+                actionsDiv.appendChild(listenButton);
+
+                const copyButton = document.createElement('button');
+                copyButton.classList.add('action-button');
+                copyButton.title = translations[currentLanguage].copy;
+                copyButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z"/></svg>`;
+                copyButton.onclick = () => {
+                    const tempTextArea = document.createElement('textarea');
+                    tempTextArea.value = aiResponseText;
+                    document.body.appendChild(tempTextArea);
+                    tempTextArea.select();
+                    try {
+                        document.execCommand('copy');
+                        copyButton.textContent = translations[currentLanguage].copied;
+                    } catch (err) {
+                        console.error('Failed to copy text using execCommand: ', err);
+                        copyButton.textContent = translations[currentLanguage].error;
+                    }
+                    document.body.removeChild(tempTextArea);
+                    setTimeout(() => { copyButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z"/></svg>`; }, 2000);
+                };
+                actionsDiv.appendChild(copyButton);
+
+                const likeButton = document.createElement('button');
+                likeButton.classList.add('action-button');
+                likeButton.title = translations[currentLanguage].like;
+                likeButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M1 21H5V9H1V21ZM22 9C22 7.9 21.1 7 20 7H14.69L15.64 3.43L15.35 2.5L11.75 6.1C11.33 6.52 11.08 7.08 11.08 7.66V19H19.75C20.58 19 21.29 18.5 21.6 17.75L22 15.5V9Z"/></svg>`;
+                likeButton.onclick = () => console.log('Liked AI message:', aiResponseText);
+                actionsDiv.appendChild(likeButton);
+
+                const dislikeButton = document.createElement('button');
+                dislikeButton.classList.add('action-button');
+                dislikeButton.title = translations[currentLanguage].dislike;
+                dislikeButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M23 3H19V15H23V3ZM2 15C2 16.1 2.9 17 4 17H9.31L8.36 20.57L8.65 21.5L12.25 17.9C12.67 17.48 12.92 16.92 12.92 16.34V5H4.25C3.42 5 2.71 5.5 2.4 6.25L2 8.5V15Z"/></svg>`;
+                dislikeButton.onclick = () => console.log('Disliked AI message:', aiResponseText);
+                actionsDiv.appendChild(dislikeButton);
+
+                messageBubble.appendChild(actionsDiv); // Then append actions
+            }
+
+            loadingIndicator.style.display = 'none'; // Hide global loading indicator
+            chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
+        }
+
+        /**
+         * Function to trigger a deep search.
+         * Prepends a special prefix to the current prompt and calls sendMessage.
+         */
+        function triggerDeepSearch() {
+            const promptInput = document.getElementById('aiPrompt');
+            const userMessageText = promptInput.value.trim();
+            if (userMessageText) {
+                // Prepend a special tag to the user's prompt to signify deep search
+                promptInput.value = DEEP_SEARCH_TRIGGER_PREFIX + userMessageText;
+                // sendMessage will be called when user presses send, or Enter
+            } else {
+                alert(translations[currentLanguage].deepSearchPlaceholder);
+            }
+        }
+
+        /**
+         * Function to trigger a code generation request.
+         * Sets a flag and asks the user for the code prompt.
+         */
+        function triggerCodeGenerationRequest() {
+            isNextMessageCodeRequest = true;
+            // Send AI's question to the chat display
+            const aiQuestion = translations[currentLanguage].codeRequestPrompt;
+            appendMessageToChat(aiQuestion, 'ai');
+            document.getElementById('aiPrompt').value = ''; // Clear prompt for user to enter code request
+            document.getElementById('aiPrompt').focus();
+        }
+
+
+        /**
+         * Appends a message bubble to the chat history container.
+         * @param {string} text - The message text (can be Markdown for AI).
+         * @param {'user'|'ai'} sender - The sender of the message.
+         * @param {boolean} isInitialLoad - True if message is being loaded from history, prevents re-writing to Firestore. (Parameter kept for compatibility, but its use is reduced)
+         * @param {string} [extraClasses=''] - Optional additional CSS classes.
+         * @param {string} [highlightQuery=''] - Optional query to highlight messages.
+         */
+        function appendMessageToChat(text, sender, isInitialLoad = false, extraClasses = '', highlightQuery = '') {
+            const chatHistoryContainer = document.getElementById('chatHistoryContainer');
+            const messageBubble = document.createElement('div');
+            messageBubble.classList.add('message-bubble', sender, ...extraClasses.split(' ').filter(Boolean));
+
+            const contentDiv = document.createElement('div'); // Create a div for message content
+
+            if (sender === 'ai') {
+                contentDiv.innerHTML = convertMarkdownToHtml(text);
+                messageBubble.appendChild(contentDiv); // Append content first
+
+                // Add Listen, Copy, Like, Dislike buttons for AI messages
+                const actionsDiv = document.createElement('div');
+                actionsDiv.classList.add('ai-message-actions');
+
+                // Listen button
+                const listenButton = document.createElement('button');
+                listenButton.classList.add('action-button');
+                listenButton.title = translations[currentLanguage].listen;
+                listenButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 4L7 9H4C3.45 9 3 9.45 3 10V14C3 14.55 3.45 15 4 15H7L12 20V4ZM14 8V16C16.14 15.35 17.79 13.88 18.5 12C17.79 10.12 16.14 8.65 14 8Z"/></svg>`;
+                listenButton.onclick = () => speakResponse(text, currentLanguage === 'ru' ? 'ru-RU' : 'en-US');
+                actionsDiv.appendChild(listenButton);
+
+                const copyButton = document.createElement('button');
+                copyButton.classList.add('action-button');
+                copyButton.title = translations[currentLanguage].copy;
+                copyButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z"/></svg>`;
+                copyButton.onclick = () => {
+                    const tempTextArea = document.createElement('textarea');
+                    tempTextArea.value = text;
+                    document.body.appendChild(tempTextArea);
+                    tempTextArea.select();
+                    try {
+                        document.execCommand('copy');
+                        copyButton.textContent = translations[currentLanguage].copied;
+                    } catch (err) {
+                        console.error('Failed to copy text using execCommand: ', err);
+                        copyButton.textContent = translations[currentLanguage].error;
+                    }
+                    document.body.removeChild(tempTextArea);
+                    setTimeout(() => { copyButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z"/></svg>`; }, 2000);
+                };
+                actionsDiv.appendChild(copyButton);
+
+                const likeButton = document.createElement('button');
+                likeButton.classList.add('action-button');
+                likeButton.title = translations[currentLanguage].like;
+                likeButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M1 21H5V9H1V21ZM22 9C22 7.9 21.1 7 20 7H14.69L15.64 3.43L15.35 2.5L11.75 6.1C11.33 6.52 11.08 7.08 11.08 7.66V19H19.75C20.58 19 21.29 18.5 21.6 17.75L22 15.5V9Z"/></svg>`;
+                likeButton.onclick = () => console.log('Liked AI message:', text);
+                actionsDiv.appendChild(likeButton);
+
+                const dislikeButton = document.createElement('button');
+                dislikeButton.classList.add('action-button');
+                dislikeButton.title = translations[currentLanguage].dislike;
+                dislikeButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M23 3H19V15H23V3ZM2 15C2 16.1 2.9 17 4 17H9.31L8.36 20.57L8.65 21.5L12.25 17.9C12.67 17.48 12.92 16.92 12.92 16.34V5H4.25C3.42 5 2.71 5.5 2.4 6.25L2 8.5V15Z"/></svg>`;
+                dislikeButton.onclick = () => console.log('Disliked AI message:', text);
+                actionsDiv.appendChild(dislikeButton);
+
+                messageBubble.appendChild(actionsDiv); // Then append actions
+            } else {
+                // For user messages, set textContent directly
+                contentDiv.textContent = text;
+                messageBubble.appendChild(contentDiv);
+            }
+
+
+            // Add search-match class if it's a search result and not an empty query
+            if (highlightQuery && text.toLowerCase().includes(highlightQuery.toLowerCase())) {
+                messageBubble.classList.add('search-match');
+            }
+
+            chatHistoryContainer.appendChild(messageBubble);
+            chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight; // Auto-scroll to latest
+        }
+
+        /**
+         * Simple Markdown to HTML converter.
+         * Supports basic formatting like bold, italic, code blocks, lists, and a terminal output block.
+         * @param {string} markdownText - The Markdown text to convert.
+         * @returns {string} - The HTML string.
+         */
+        function convertMarkdownToHtml(markdownText) {
+            let html = markdownText;
+
+            // 1. Convert TERMINAL blocks (content is escaped)
+            html = html.replace(/```terminal\n([\s\S]*?)\n```/g, (match, content) => {
+                const isError = /error|fail|denied|permission|not found/i.test(content);
+                return `<div class="terminal-output ${isError ? 'error' : ''}">${escapeHtml(content.trim())}</div>`;
+            });
+
+            // 2. Convert regular code blocks (content is escaped)
+            html = html.replace(/```(\w+)?\n([\s\S]*?)\n```/g, (match, lang, code) => {
+                const language = lang ? lang.trim() : 'text';
+                return `
+                    <div class="code-block-wrapper">
+                        <div class="code-block-header">
+                            <span>${language}</span>
+                            <div class="code-block-header-actions">
+                                <button onclick="toggleCollapse(this)" data-i18n-dynamic-text="collapse">${translations[currentLanguage].collapse}</button>
+                                <button onclick="toggleWrap(this)" data-i18n-dynamic-text="wrap">${translations[currentLanguage].wrap}</button>
+                                <button onclick="copyCode(this)" data-i18n-dynamic-text="copy">${translations[currentLanguage].copy}</button>
+                            </div>
+                        </div>
+                        <pre><code class="language-${language}">${escapeHtml(code.trim())}</code></pre>
+                    </div>
+                `;
+            });
+
+            // 3. Convert inline code (content is escaped)
+            html = html.replace(/`([^`]+)`/g, (match, inlineCodeContent) => {
+                return `<code>${escapeHtml(inlineCodeContent)}`;
+            });
+
+            // 4. Convert bold text (Escape content before wrapping)
+            html = html.replace(/\*\*(.*?)\*\*/g, (match, content) => `<strong>${escapeHtml(content)}</strong>`);
+            html = html.replace(/__(.*?)__/g, (match, content) => `<strong>${escapeHtml(content)}</strong>`);
+
+            // 5. Convert italic text (Escape content before wrapping)
+            html = html.replace(/\*(.*?)\*/g, (match, content) => `<em>${escapeHtml(content)}</em>`);
+            html = html.replace(/_(.*?)_/g, (match, content) => `<em>${escapeHtml(content)}</em>`);
+
+
+            // 6. Convert headings (Escape content)
+            html = html.replace(/^### (.*$)/gm, (match, content) => `<h3 class="text-lg font-semibold mt-4 mb-1">${escapeHtml(content)}</h3>`)
+                       .replace(/^## (.*$)/gm, (match, content) => `<h2 class="text-xl font-bold mt-5 mb-2">${escapeHtml(content)}</h2>`)
+                       .replace(/^# (.*$)/gm, (match, content) => `<h1 class="text-2xl font-extrabold mt-6 mb-3">${escapeHtml(content)}</h1>`);
+
+            // 7. Convert lists (Escape content)
+            html = html.replace(/^\s*\*\s+(.*)/gm, (match, itemContent) => `<li>${escapeHtml(itemContent)}</li>`)
+                       .replace(/^\s*-\s+(.*)/gm, (match, itemContent) => `<li>${escapeHtml(itemContent)}</li>`);
+
+            // Wrap list items in ul if they exist
+            if (html.includes('<li>')) {
+                html = html.replace(/(<li>.*?<\/li>)+/gs, '<ul class="my-2">$1</ul>');
+            }
+
+            // 8. Convert double newlines to paragraphs (Escape content)
+            // This is the trickiest part as it processes remaining raw text.
+            // Split by double newline, then process each "paragraph"
+            const paragraphs = html.split('\n\n');
+            let processedParagraphs = [];
+
+            for (const p of paragraphs) {
+                // Check if the paragraph already starts with an HTML tag (meaning it's already processed)
+                const trimmedP = p.trim();
+                if (trimmedP.startsWith('<div class="code-block-wrapper">') ||
+                    trimmedP.startsWith('<h1') || trimmedP.startsWith('<h2') || trimmedP.startsWith('<h3') ||
+                    trimmedP.startsWith('<ul') || trimmedP.startsWith('<div class="terminal-output">') ||
+                    trimmedP.startsWith('<strong>') || trimmedP.startsWith('<em>') || trimmedP.startsWith('<code>')) {
+                    processedParagraphs.push(p); // If already HTML, push as is
+                } else if (trimmedP !== '') {
+                    // If it's pure text, escape it and wrap in <p>
+                    processedParagraphs.push(`<p class="mb-2">${escapeHtml(p.replace(/\n/g, '<br>'))}</p>`);
+                }
+                // Empty paragraphs are skipped
+            }
+
+            return processedParagraphs.join('');
+        }
+
+        /**
+         * Escapes HTML entities in a string.
+         * @param {string} text - The text to escape.
+         * @returns {string} - The escaped text.
+         */
+        function escapeHtml(text) {
+            var map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        /**
+         * Copies the code content from a pre block to the clipboard.
+         * @param {HTMLElement} button - The copy button element.
+         */
+        window.copyCode = function(button) {
+            const codeElement = button.closest('.code-block-wrapper').querySelector('code');
+            if (codeElement) {
+                const textToCopy = codeElement.innerText;
+                const tempTextArea = document.createElement('textarea');
+                tempTextArea.value = textToCopy;
+                document.body.appendChild(tempTextArea);
+                tempTextArea.select();
+                    try {
+                        document.execCommand('copy');
+                        button.textContent = translations[currentLanguage].copied;
+                    } catch (err) {
+                        console.error('Failed to copy text using execCommand: ', err);
+                        button.textContent = translations[currentLanguage].error;
+                    }
+                    document.body.removeChild(tempTextArea);
+                    setTimeout(() => {
+                        button.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z"/></svg>`;
+                    }, 2000); // Reset button text after 2 seconds
+            }
+        };
+
+        /**
+         * Toggles the collapse/expand state of a code block.
+         * @param {HTMLElement} button - The collapse button element.
+         */
+        window.toggleCollapse = function(button) {
+            const preElement = button.closest('.code-block-wrapper').querySelector('pre');
+            if (preElement) {
+                preElement.classList.toggle('collapsed');
+                button.textContent = preElement.classList.contains('collapsed') ? translations[currentLanguage].expand : translations[currentLanguage].collapse;
+            }
+        };
+
+        /**
+         * Toggles word wrap for a code block.
+         * @param {HTMLElement} button - The wrap button element.
+         */
+        window.toggleWrap = function(button) {
+            const preElement = button.closest('.code-block-wrapper').querySelector('pre');
+            if (preElement) {
+                preElement.classList.toggle('wrapped');
+                button.textContent = preElement.classList.contains('wrapped') ? translations[currentLanguage].unwrap : translations[currentLanguage].wrap;
+            }
+        };
+    </script>
+</head>
+<body class="bg-gray-100">
+    <!-- Login Screen - REMOVED COMPLETELY -->
+    <!-- The loginContainer div is now completely removed from the HTML -->
+
+    <header class="grok-header">
+        <div class="grok-logo-section">
+            <div class="grok-logo" data-i18n="appTitle">Froggy</div>
+            <!-- New Chat button in the header -->
+            <button id="newChatButton" class="new-chat-button" data-i18n="newChat">Новый чат</button>
+        </div>
+        <div class="header-right-icons">
+            <!-- Search input and toggle button -->
+            <input type="text" id="searchInput" class="hidden" data-i18n-placeholder="searchPlaceholder" placeholder="">
+            <button id="searchToggleButton" class="icon-button" title="Поиск">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3C5.91 3 3 5.91 3 9.5C3 13.09 5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14ZM9.5 14C7.01 14 5 11.99 5 9.5C5 7.01 7.01 5 9.5 5C11.99 5 14 7.01 14 9.5C14 11.99 11.99 14 9.5 14Z" fill="currentColor"/></svg>
+            </button>
+            <!-- Language selection buttons -->
+            <button id="langEn" class="lang-button">EN</button>
+            <button id="langRu" class="lang-button">RU</button>
+            <!-- Profile button is removed -->
+            <!-- The profile button and its functionality were removed as per user's request, but if it were still present, its HTML would be here. -->
+            <!-- <button id="profileButton" class="icon-button" title="Профиль">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/></svg>
+            </button> -->
+            <!-- Settings button -->
+            <button id="settingsButton" class="icon-button" title="Настройки">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 8C13.1 8 14 7.1 14 6C14 4.9 13.1 4 12 4C10.9 4 10 4.9 10 6C10 7.1 10.9 8 12 8ZM12 10C10.9 10 10 10.9 10 12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12C14 10.9 13.1 10 12 10ZM12 16C10.9 16 10 16.9 10 18C10 19.1 10.9 20 12 20C13.1 20 14 19.1 14 18C14 16.9 13.1 16 12 16Z" fill="currentColor"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <div class="main-content-wrapper">
+        <!-- User Info section (global sound toggle removed from here) -->
+        <!-- userIdDisplay and its container are removed completely -->
+        <!-- <div class="user-info-and-sound">
+            <p id="userIdDisplay" class="text-sm text-gray-600"></p>
+        </div> -->
+
+        <!-- Chat history container -->
+        <div id="chatHistoryContainer" class="chat-history-container">
+            <!-- Initial greeting or chat messages will be dynamically added here by JS -->
+            <!-- Initial state for loading will be set by loadChatHistory() -->
+        </div>
+
+        <!-- Input Area at the bottom of the main wrapper -->
+        <div class="ai-input-area">
+            <div class="input-row">
+                <textarea id="aiPrompt" placeholder="Напишите функцию Python для расчета факториала... Объясните замыкания в JavaScript..."></textarea>
+                <button id="voiceInputButton" title="Голосовой ввод">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 14C14.21 14 16 12.21 16 10V4C16 1.79 14.21 0 12 0C9.79 0 8 1.79 8 4V10C8 12.21 9.79 14 12 14ZM10 4C10 2.9 10.9 2 12 2C13.1 2 14 2.9 14 4V10C14 11.1 13.1 12 12 12C10.9 12 10 11.1 10 10V4ZM12 16C15.58 16 18.59 13.62 19.32 10.5H21C20.44 14.16 17.5 17.13 13.88 17.9L14 21H10L10.12 17.9C6.5 17.13 3.56 14.16 3 10.5H4.68C5.41 13.62 8.42 16 12 16Z"/></svg>
+                </button>
+                <button id="generateButton" title="Отправить">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z"/></svg>
+                </button>
+            </div>
+            <!-- New row for action buttons -->
+            <div class="action-buttons-row">
+                <!-- DeepSearch Button with text label -->
+                <button id="deepSearchButton" class="action-text-button" title="Deep Search">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="inline-block"><path d="M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3C5.91 3 3 5.91 3 9.5C3 13.09 5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14ZM9.5 14C7.01 14 5 11.99 5 9.5C5 7.01 7.01 5 9.5 5C11.99 5 14 7.01 14 9.5C14 11.99 11.99 14 9.5 14Z" fill="currentColor"/></svg>
+                    DeepSearch
+                </button>
+                <!-- Code Button with text label -->
+                <button id="codeButton" class="action-text-button" title="Generate Code">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="inline-block"><path d="M9.4 16.6L4.8 12L9.4 7.4L8 6L2 12L8 18L9.4 16.6ZM14.6 16.6L19.2 12L14.6 7.4L16 6L22 12L16 18L14.6 16.6Z"/></svg>
+                    Code
+                </button>
+            </div>
+            <!-- Global Loading Indicator -->
+            <div id="loadingIndicator">
+                <div class="loading-spinner"></div>
+                <span id="loadingMessage">Froggy пишет...</span>
+            </div>
+        </div>
+    </div>
+
+    <footer class="grok-footer">
+        <div class="footer-left">
+            <!-- Text "Как Froggy может помочь?" and related buttons removed -->
+        </div>
+        <div class="footer-right">
+            <span>Froggy 1.0</span>
+            <a href="https://youtube.com/@kit_0ficiall?si=zZuDbnd1b3OR8gyb" target="_blank" rel="noopener noreferrer" class="footer-button-link" data-i18n="developer">
+                Разработчик
+            </a>
+            <!-- Scroll to Top button is removed -->
+        </div>
+    </footer>
+
+    <!-- Settings Modal -->
+    <div id="settingsModalOverlay" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="settingsModalTitle" data-i18n="settingsTitle">Настройки интерфейса</h2>
+                <button id="closeSettingsModal" class="modal-close-button" data-i18n="close">×</button>
+            </div>
+            <div class="modal-body">
+                <div>
+                    <label for="bgColorInput" id="bgColorLabel" data-i18n="backgroundColor">Цвет фона</label>
+                    <input type="color" id="bgColorInput" value="#0d0d0d">
+                </div>
+                <div>
+                    <label for="textColorInput" id="textColorLabel" data-i18n="textColor">Цвет текста</label>
+                    <input type="color" id="textColorInput" value="#e0e0e0">
+                </div>
+                <!-- Sound toggle checkbox -->
+                <div class="checkbox-container">
+                    <input type="checkbox" id="enableSoundCheckbox">
+                    <label for="enableSoundCheckbox" id="enableSoundLabel" data-i18n="enableSound">Включить звук</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="applySettingsButton" class="modal-button primary" data-i18n="applySettings">Применить</button>
+                <button class="modal-button" data-i18n="close" onclick="hideSettingsModal()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
