@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="appTitle">Froggy</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -517,6 +516,7 @@
             font-weight: 500;
             cursor: pointer;
             transition: background-color 0.2s ease, border-color 0.2s ease;
+            text-decoration: none; /* For <a> tags styled as buttons */
         }
         .footer-button:hover {
             background-color: var(--active-elements-bg);
@@ -767,7 +767,6 @@
         }
 
     </style>
-    <!-- Firebase SDK CDN imports removed -->
     <script type="module">
         // Firebase imports and related initialization removed
 
@@ -827,6 +826,8 @@
                 'codeButtonTitle': 'Code',
                 'randomButtonTitle': 'Random',
                 'newChat': 'New Chat',
+                'consoleTitle': 'Console',
+                'inputPlaceholder': 'What do you want?'
                 // Removed all login/profile related translations
             },
             'ru': {
@@ -869,6 +870,8 @@
                 'codeButtonTitle': 'Code',
                 'randomButtonTitle': 'Random',
                 'newChat': 'Новый чат',
+                'consoleTitle': 'Консоль',
+                'inputPlaceholder': 'Что вы хотите?'
                 // Removed all login/profile related translations
             }
         };
@@ -1148,7 +1151,7 @@
             });
 
             // Update specific placeholders and titles
-            document.getElementById('aiPrompt').placeholder = (lang === 'ru' ? 'Напишите функцию Python для расчета факториала... Объясните замыкания в JavaScript...' : 'Write a Python function to calculate factorial... Explain closures in JavaScript...');
+            document.getElementById('aiPrompt').placeholder = translations[lang].inputPlaceholder;
             document.getElementById('generateButton').title = (lang === 'ru' ? 'Отправить' : 'Send');
             document.getElementById('voiceInputButton').title = translations[lang].voiceInputPlaceholder.split(':')[0]; // Just the title part
             document.getElementById('searchToggleButton').title = translations[lang].searchPlaceholder.split(':')[0]; // Just the title part
@@ -1156,6 +1159,9 @@
 
             document.getElementById('deepSearchButton').title = translations[lang].deepSearchTitle; // New
             document.getElementById('codeButton').title = translations[lang].codeButtonTitle; // New
+            
+            // New console button translation
+            if(document.getElementById('consoleButton')) document.getElementById('consoleButton').textContent = translations[lang].consoleTitle;
 
             document.getElementById('loadingMessage').textContent = translations[lang].froggyIsWriting;
             document.querySelector('.footer-right .footer-button-link').textContent = translations[lang].developer; // Update developer link text
@@ -1365,8 +1371,8 @@
             } else {
                 // Normal conversation or identity query
                 const lowerCaseUserMessage = userMessageText.toLowerCase();
-                const identityKeywordsRu = ["кто ты", "кто твой создатель", "твое имя", "привет", "как зовут"];
-                const identityKeywordsEn = ["who are you", "who created you", "what is your name", "what's your name", "your name", "hello", "hi"];
+                const identityKeywordsRu = ["кто ты", "кто твой создатель", "твое имя", "как зовут твоего создателя", "как зовут"];
+                const identityKeywordsEn = ["who are you", "who created you", "what is your name", "what's your name", "your name","hi"];
 
                 let isIdentityQuery = false;
                 for (const keyword of identityKeywordsRu) { if (lowerCaseUserMessage.includes(keyword)) { isIdentityQuery = true; break; } }
@@ -1396,7 +1402,7 @@
                 // Убедитесь, что ключ находится внутри кавычек.
                 const apiKey = "AIzaSyDxTk5blVWaRU1MTGEryLGRCUOZk4IzBQY"; // <--- Вставьте сюда ваш ключ API
                 // ======================================
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -1423,11 +1429,12 @@
 
             // After getting response, update chat history and UI
             chatHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
-            aiContentDiv.innerHTML = convertMarkdownToHtml(aiResponseText); // Update the placeholder's content
+            // This is a bit tricky, we need to replace the placeholder, not just add to it
+            aiContentDiv.innerHTML = convertMarkdownToHtml(aiResponseText);
             speakResponse(aiResponseText, currentLanguage === 'ru' ? 'ru-RU' : 'en-US');
 
-            // Add action buttons (Listen, Copy, Like, Dislike)
-            if (aiResponseText) {
+             // Add action buttons to the bubble, now that content is final
+            if (aiResponseText && aiResponseText !== translations[currentLanguage].apiError) {
                 const actionsDiv = document.createElement('div');
                 actionsDiv.classList.add('ai-message-actions');
 
@@ -1472,8 +1479,8 @@
                 dislikeButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M23 3H19V15H23V3ZM2 15C2 16.1 2.9 17 4 17H9.31L8.36 20.57L8.65 21.5L12.25 17.9C12.67 17.48 12.92 16.92 12.92 16.34V5H4.25C3.42 5 2.71 5.5 2.4 6.25L2 8.5V15Z"/></svg>`;
                 dislikeButton.onclick = () => console.log('Disliked AI message:', aiResponseText);
                 actionsDiv.appendChild(dislikeButton);
-
-                messageBubble.appendChild(actionsDiv); // Then append actions
+                
+                aiResponsePlaceholder.appendChild(actionsDiv);
             }
 
             loadingIndicator.style.display = 'none'; // Hide global loading indicator
@@ -1589,6 +1596,14 @@
                 messageBubble.classList.add('search-match');
             }
 
+            // Remove initial greeting if it exists when the first message is appended
+            const initialGreetingElement = document.getElementById('initialGreeting');
+            if (initialGreetingElement) {
+                initialGreetingElement.remove();
+                chatHistoryContainer.style.justifyContent = ''; 
+                chatHistoryContainer.style.alignItems = ''; 
+            }
+
             chatHistoryContainer.appendChild(messageBubble);
             chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight; // Auto-scroll to latest
         }
@@ -1600,17 +1615,15 @@
          * @returns {string} - The HTML string.
          */
         function convertMarkdownToHtml(markdownText) {
-            let html = markdownText;
+            let text = markdownText || '';
 
-            // 1. Convert TERMINAL blocks (content is escaped)
-            html = html.replace(/```terminal\n([\s\S]*?)\n```/g, (match, content) => {
-                const isError = /error|fail|denied|permission|not found/i.test(content);
-                return `<div class="terminal-output ${isError ? 'error' : ''}">${escapeHtml(content.trim())}</div>`;
-            });
+            // Escape HTML to prevent XSS, except for the tags we are about to create.
+            let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-            // 2. Convert regular code blocks (content is escaped)
-            html = html.replace(/```(\w+)?\n([\s\S]*?)\n```/g, (match, lang, code) => {
+            // Code blocks ```lang\ncode```
+            html = html.replace(/```(\w+)?\n([\s\S]+?)\n```/g, (match, lang, code) => {
                 const language = lang ? lang.trim() : 'text';
+                const escapedCode = code; // Already escaped
                 return `
                     <div class="code-block-wrapper">
                         <div class="code-block-header">
@@ -1621,61 +1634,30 @@
                                 <button onclick="copyCode(this)" data-i18n-dynamic-text="copy">${translations[currentLanguage].copy}</button>
                             </div>
                         </div>
-                        <pre><code class="language-${language}">${escapeHtml(code.trim())}</code></pre>
+                        <pre><code class="language-${language}">${escapedCode}</code></pre>
                     </div>
                 `;
             });
+            
+            // Headings
+            html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+            html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+            html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
 
-            // 3. Convert inline code (content is escaped)
-            html = html.replace(/`([^`]+)`/g, (match, inlineCodeContent) => {
-                return `<code>${escapeHtml(inlineCodeContent)}`;
-            });
+            // Bold
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Italic
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // Lists
+            html = html.replace(/^\s*[\-\*]\s+(.*)/gim, '<li>$1</li>');
+            html = html.replace(/<\/li>\n<li>/gim, '</li><li>'); // Join adjacent list items
+            html = html.replace(/(<li>.*<\/li>)/gis, '<ul>$1</ul>'); // Wrap in <ul>
 
-            // 4. Convert bold text (Escape content before wrapping)
-            html = html.replace(/\*\*(.*?)\*\*/g, (match, content) => `<strong>${escapeHtml(content)}</strong>`);
-            html = html.replace(/__(.*?)__/g, (match, content) => `<strong>${escapeHtml(content)}</strong>`);
-
-            // 5. Convert italic text (Escape content before wrapping)
-            html = html.replace(/\*(.*?)\*/g, (match, content) => `<em>${escapeHtml(content)}</em>`);
-            html = html.replace(/_(.*?)_/g, (match, content) => `<em>${escapeHtml(content)}</em>`);
-
-
-            // 6. Convert headings (Escape content)
-            html = html.replace(/^### (.*$)/gm, (match, content) => `<h3 class="text-lg font-semibold mt-4 mb-1">${escapeHtml(content)}</h3>`)
-                       .replace(/^## (.*$)/gm, (match, content) => `<h2 class="text-xl font-bold mt-5 mb-2">${escapeHtml(content)}</h2>`)
-                       .replace(/^# (.*$)/gm, (match, content) => `<h1 class="text-2xl font-extrabold mt-6 mb-3">${escapeHtml(content)}</h1>`);
-
-            // 7. Convert lists (Escape content)
-            html = html.replace(/^\s*\*\s+(.*)/gm, (match, itemContent) => `<li>${escapeHtml(itemContent)}</li>`)
-                       .replace(/^\s*-\s+(.*)/gm, (match, itemContent) => `<li>${escapeHtml(itemContent)}</li>`);
-
-            // Wrap list items in ul if they exist
-            if (html.includes('<li>')) {
-                html = html.replace(/(<li>.*?<\/li>)+/gs, '<ul class="my-2">$1</ul>');
-            }
-
-            // 8. Convert double newlines to paragraphs (Escape content)
-            // This is the trickiest part as it processes remaining raw text.
-            // Split by double newline, then process each "paragraph"
-            const paragraphs = html.split('\n\n');
-            let processedParagraphs = [];
-
-            for (const p of paragraphs) {
-                // Check if the paragraph already starts with an HTML tag (meaning it's already processed)
-                const trimmedP = p.trim();
-                if (trimmedP.startsWith('<div class="code-block-wrapper">') ||
-                    trimmedP.startsWith('<h1') || trimmedP.startsWith('<h2') || trimmedP.startsWith('<h3') ||
-                    trimmedP.startsWith('<ul') || trimmedP.startsWith('<div class="terminal-output">') ||
-                    trimmedP.startsWith('<strong>') || trimmedP.startsWith('<em>') || trimmedP.startsWith('<code>')) {
-                    processedParagraphs.push(p); // If already HTML, push as is
-                } else if (trimmedP !== '') {
-                    // If it's pure text, escape it and wrap in <p>
-                    processedParagraphs.push(`<p class="mb-2">${escapeHtml(p.replace(/\n/g, '<br>'))}</p>`);
-                }
-                // Empty paragraphs are skipped
-            }
-
-            return processedParagraphs.join('');
+            // Replace newlines with <br>, but not inside <pre> or other blocks
+            // This is a simplified approach. A more robust parser would be needed for complex cases.
+            return html.replace(/\n/g, '<br>').replace(/<br><ul>/g, '<ul>').replace(/<\/ul><br>/g, '</ul>');
         }
 
         /**
@@ -1715,7 +1697,7 @@
                     }
                     document.body.removeChild(tempTextArea);
                     setTimeout(() => {
-                        button.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z"/></svg>`;
+                        button.textContent = translations[currentLanguage].copy;
                     }, 2000); // Reset button text after 2 seconds
             }
         };
@@ -1746,30 +1728,18 @@
     </script>
 </head>
 <body class="bg-gray-100">
-    <!-- Login Screen - REMOVED COMPLETELY -->
-    <!-- The loginContainer div is now completely removed from the HTML -->
-
     <header class="grok-header">
         <div class="grok-logo-section">
             <div class="grok-logo" data-i18n="appTitle">Froggy</div>
-            <!-- New Chat button in the header -->
             <button id="newChatButton" class="new-chat-button" data-i18n="newChat">Новый чат</button>
         </div>
         <div class="header-right-icons">
-            <!-- Search input and toggle button -->
             <input type="text" id="searchInput" class="hidden" data-i18n-placeholder="searchPlaceholder" placeholder="">
             <button id="searchToggleButton" class="icon-button" title="Поиск">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3C5.91 3 3 5.91 3 9.5C3 13.09 5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14ZM9.5 14C7.01 14 5 11.99 5 9.5C5 7.01 7.01 5 9.5 5C11.99 5 14 7.01 14 9.5C14 11.99 11.99 14 9.5 14Z" fill="currentColor"/></svg>
             </button>
-            <!-- Language selection buttons -->
             <button id="langEn" class="lang-button">EN</button>
             <button id="langRu" class="lang-button">RU</button>
-            <!-- Profile button is removed -->
-            <!-- The profile button and its functionality were removed as per user's request, but if it were still present, its HTML would be here. -->
-            <!-- <button id="profileButton" class="icon-button" title="Профиль">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/></svg>
-            </button> -->
-            <!-- Settings button -->
             <button id="settingsButton" class="icon-button" title="Настройки">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 8C13.1 8 14 7.1 14 6C14 4.9 13.1 4 12 4C10.9 4 10 4.9 10 6C10 7.1 10.9 8 12 8ZM12 10C10.9 10 10 10.9 10 12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12C14 10.9 13.1 10 12 10ZM12 16C10.9 16 10 16.9 10 18C10 19.1 10.9 20 12 20C13.1 20 14 19.1 14 18C14 16.9 13.1 16 12 16Z" fill="currentColor"/></svg>
             </button>
@@ -1777,22 +1747,12 @@
     </header>
 
     <div class="main-content-wrapper">
-        <!-- User Info section (global sound toggle removed from here) -->
-        <!-- userIdDisplay and its container are removed completely -->
-        <!-- <div class="user-info-and-sound">
-            <p id="userIdDisplay" class="text-sm text-gray-600"></p>
-        </div> -->
-
-        <!-- Chat history container -->
         <div id="chatHistoryContainer" class="chat-history-container">
-            <!-- Initial greeting or chat messages will be dynamically added here by JS -->
-            <!-- Initial state for loading will be set by loadChatHistory() -->
-        </div>
+            </div>
 
-        <!-- Input Area at the bottom of the main wrapper -->
         <div class="ai-input-area">
             <div class="input-row">
-                <textarea id="aiPrompt" placeholder="Напишите функцию Python для расчета факториала... Объясните замыкания в JavaScript..."></textarea>
+                <textarea id="aiPrompt" placeholder="Что вы хотите?"></textarea>
                 <button id="voiceInputButton" title="Голосовой ввод">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 14C14.21 14 16 12.21 16 10V4C16 1.79 14.21 0 12 0C9.79 0 8 1.79 8 4V10C8 12.21 9.79 14 12 14ZM10 4C10 2.9 10.9 2 12 2C13.1 2 14 2.9 14 4V10C14 11.1 13.1 12 12 12C10.9 12 10 11.1 10 10V4ZM12 16C15.58 16 18.59 13.62 19.32 10.5H21C20.44 14.16 17.5 17.13 13.88 17.9L14 21H10L10.12 17.9C6.5 17.13 3.56 14.16 3 10.5H4.68C5.41 13.62 8.42 16 12 16Z"/></svg>
                 </button>
@@ -1800,41 +1760,38 @@
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z"/></svg>
                 </button>
             </div>
-            <!-- New row for action buttons -->
             <div class="action-buttons-row">
-                <!-- DeepSearch Button with text label -->
                 <button id="deepSearchButton" class="action-text-button" title="Deep Search">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="inline-block"><path d="M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3C5.91 3 3 5.91 3 9.5C3 13.09 5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14ZM9.5 14C7.01 14 5 11.99 5 9.5C5 7.01 7.01 5 9.5 5C11.99 5 14 7.01 14 9.5C14 11.99 11.99 14 9.5 14Z" fill="currentColor"/></svg>
                     DeepSearch
                 </button>
-                <!-- Code Button with text label -->
                 <button id="codeButton" class="action-text-button" title="Generate Code">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="inline-block"><path d="M9.4 16.6L4.8 12L9.4 7.4L8 6L2 12L8 18L9.4 16.6ZM14.6 16.6L19.2 12L14.6 7.4L16 6L22 12L16 18L14.6 16.6Z"/></svg>
                     Code
                 </button>
             </div>
-            <!-- Global Loading Indicator -->
             <div id="loadingIndicator">
                 <div class="loading-spinner"></div>
-                <span id="loadingMessage">Froggy пишет...</span>
+                <span id="loadingMessage"> </span>
             </div>
         </div>
     </div>
 
     <footer class="grok-footer">
         <div class="footer-left">
-            <!-- Text "Как Froggy может помочь?" and related buttons removed -->
+            <div style="text-align: left;">
+                <h3 style="font-size: 1.5rem; font-weight: 700; color: var(--accent-color); margin-bottom: 8px;">Froggy</h3>
+                <a id="consoleButton" href="console.html" class="footer-button" data-i18n="consoleTitle">Консоль</a>
+            </div>
         </div>
         <div class="footer-right">
             <span>Froggy 1.0</span>
             <a href="https://youtube.com/@kit_0ficiall?si=zZuDbnd1b3OR8gyb" target="_blank" rel="noopener noreferrer" class="footer-button-link" data-i18n="developer">
                 Разработчик
             </a>
-            <!-- Scroll to Top button is removed -->
         </div>
     </footer>
 
-    <!-- Settings Modal -->
     <div id="settingsModalOverlay" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -1850,7 +1807,6 @@
                     <label for="textColorInput" id="textColorLabel" data-i18n="textColor">Цвет текста</label>
                     <input type="color" id="textColorInput" value="#e0e0e0">
                 </div>
-                <!-- Sound toggle checkbox -->
                 <div class="checkbox-container">
                     <input type="checkbox" id="enableSoundCheckbox">
                     <label for="enableSoundCheckbox" id="enableSoundLabel" data-i18n="enableSound">Включить звук</label>
@@ -1864,4 +1820,3 @@
     </div>
 </body>
 </html>
-

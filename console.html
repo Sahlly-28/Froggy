@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Froggy Console</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --editor-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --secondary-bg: #2a2a2a;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-color: #10b981;
+            --terminal-bg: #000000;
+            --terminal-header: #252526;
+            --tab-bg: #2d2d2d;
+            --tab-active-bg: #1e1e1e;
+        }
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+        }
+        .main-container {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            gap: 1rem;
+        }
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .console-header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin: 0;
+        }
+        .action-button {
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .action-button:hover:not(:disabled) {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: var(--bg-color);
+        }
+        /* --- НОВЫЙ СТИЛЬ ДЛЯ НАЖАТИЯ --- */
+        .action-button:active:not(:disabled) {
+            background-color: #000;
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+            transform: translateY(1px);
+        }
+        .action-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .run-button {
+             background-color: var(--accent-color);
+             color: var(--bg-color);
+             border-color: var(--accent-color);
+        }
+        .run-button:hover:not(:disabled) {
+            background-color: #0d926b;
+            border-color: #0d926b;
+        }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .controls label, .controls select {
+            display: none; 
+        }
+        .file-bar {
+            display: flex;
+            align-items: center;
+            background-color: var(--bg-color);
+            padding-top: 0.5rem;
+            flex-shrink: 0;
+            gap: 2px;
+        }
+        .file-tab {
+            padding: 8px 16px;
+            background-color: var(--tab-bg);
+            cursor: pointer;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .file-tab.active {
+            background-color: var(--tab-active-bg);
+            color: var(--accent-color);
+        }
+        .file-tab .file-name-span { padding-right: 8px; }
+        .file-tab input {
+            background: none;
+            border: none;
+            color: var(--accent-color);
+            font-family: inherit;
+            padding: 0;
+            outline: 1px solid var(--accent-color);
+            width: 100px;
+        }
+
+        #add-file-button {
+            background: none;
+            border: none;
+            color: var(--accent-color);
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0 12px;
+        }
+        .ide-container {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            border: 1px solid var(--border-color);
+            border-top: none; 
+            border-radius: 0 8px 8px 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+        #editor {
+            width: 100%;
+            height: 65%;
+        }
+        #terminal {
+            width: 100%;
+            height: 35%;
+            background-color: var(--terminal-bg);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        .terminal-header {
+            background-color: var(--terminal-header);
+            padding: 0.5rem 1rem;
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+        .terminal-output {
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .terminal-output .log { color: #cccccc; }
+        .terminal-output .error { color: #f44336; }
+        .terminal-output .info { color: #2196F3; }
+        .terminal-output .py-result { color: #4CAF50; }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <header class="console-header">
+            <h1>Froggy Console</h1>
+            <a href="index.html" class="action-button">Вернуться к чату</a>
+        </header>
+
+        <div class="controls">
+            <select id="language-selector">
+                <option value="python">Python</option>
+                <option value="javascript">JavaScript</option>
+            </select>
+            <button id="run-button" class="action-button run-button">▶ Run</button>
+        </div>
+        
+        <div class="file-bar" id="file-bar">
+             <button id="add-file-button" title="Создать новый файл">+</button>
+        </div>
+
+        <main class="ide-container">
+            <div id="editor"></div>
+            <div id="terminal">
+                <div class="terminal-header">TERMINAL</div>
+                <div id="terminal-output" class="terminal-output"></div>
+            </div>
+        </main>
+        
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@latest/min/vs/loader.js"></script>
+    <script>
+        // --- Элементы UI ---
+        const editorDiv = document.getElementById('editor');
+        const terminalOutputDiv = document.getElementById('terminal-output');
+        const languageSelector = document.getElementById('language-selector');
+        const runButton = document.getElementById('run-button');
+        const addFileButton = document.getElementById('add-file-button');
+        const fileBar = document.getElementById('file-bar');
+        
+        // --- Глобальное состояние ---
+        let editor;
+        let pyodide;
+        let files = [];
+        let activeFileId = null;
+        let fileCounter = 0;
+
+        // --- Начальный код для файлов ---
+        const initialCode = {
+            python: `from datetime import datetime\n\n# Измените имя прямо здесь\nname = "Фрогги"\n\n# Получаем текущую дату и время\ncurrent_date = datetime.now().strftime("%d-%m-%Y %H:%M:%S")\n\n# Выводим приветствие с датой\nprint(f"Привет, {name}! Текущая дата и время: {current_date}")`,
+            javascript: `// Измените имя прямо здесь\nconst name = "Пользователь";\n\nconst currentDate = new Date().toLocaleString('ru-RU');\n\nconsole.log(\`Привет, \${name}! Текущая дата и время: \${currentDate}\`);`
+        };
+
+        // --- Главная функция инициализации ---
+        async function main() {
+            runButton.disabled = true;
+            printToTerminal("Инициализация...", "info");
+            
+            await initEditor();
+            await initPyodide();
+            
+            createNewFile('script.py', 'python', initialCode.python, false);
+            
+            printToTerminal("Все готово к работе!", "py-result");
+            runButton.disabled = false;
+        }
+        
+        // --- Функции инициализации ---
+        function initEditor() {
+            return new Promise(resolve => {
+                require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@latest/min/vs' }});
+                require(['vs/editor/editor.main'], () => {
+                    editor = monaco.editor.create(editorDiv, {
+                        theme: 'vs-dark',
+                        automaticLayout: true,
+                        fontSize: 14,
+                        minimap: { enabled: true }
+                    });
+                    editor.getModel().onDidChangeContent(() => {
+                        if (activeFileId !== null) {
+                            const file = files.find(f => f.id === activeFileId);
+                            if(file) file.content = editor.getValue();
+                        }
+                    });
+                    printToTerminal("Редактор готов.", "py-result");
+                    resolve();
+                });
+            });
+        }
+        
+        async function initPyodide() {
+            printToTerminal("Загрузка среды Python... Это может занять несколько секунд.", "info");
+            pyodide = await loadPyodide({
+                stdout: (text) => printToTerminal(text, "log"),
+                stderr: (text) => printToTerminal(text, "error"),
+            });
+            printToTerminal(`Среда Python (Pyodide ${pyodide.version}) готова.`, "py-result");
+        }
+
+        main().catch(err => {
+            printToTerminal(`Критическая ошибка при инициализации: ${err}`, 'error');
+            console.error(err);
+        });
+
+        // --- Логика управления файлами ---
+        function createNewFile(defaultName = '', defaultLang = 'python', defaultContent = '', askForName = true) {
+            let fileName = defaultName;
+            if (askForName) {
+                const promptedName = prompt("Введите имя нового файла (например, script.py или app.js):", defaultName);
+                if (!promptedName) return; 
+                fileName = promptedName;
+            }
+            
+            const extension = fileName.split('.').pop();
+            const language = (extension === 'js') ? 'javascript' : 'python';
+            
+            const newFile = {
+                id: ++fileCounter,
+                name: fileName,
+                language: language,
+                content: defaultContent || initialCode[language] || ''
+            };
+            files.push(newFile);
+            switchToFile(newFile.id);
+        }
+
+        function switchToFile(fileId) {
+            const fileToActivate = files.find(f => f.id === fileId);
+            if (!fileToActivate) return;
+            
+            activeFileId = fileId;
+            editor.setValue(fileToActivate.content);
+            monaco.editor.setModelLanguage(editor.getModel(), fileToActivate.language);
+            languageSelector.value = fileToActivate.language;
+            
+            renderFileTabs();
+        }
+
+        function renderFileTabs() {
+            while(fileBar.children.length > 1) {
+                fileBar.removeChild(fileBar.lastChild);
+            }
+            
+            files.forEach(file => {
+                const tab = document.createElement('div');
+                tab.className = 'file-tab';
+                tab.dataset.id = file.id;
+                if (file.id === activeFileId) {
+                    tab.classList.add('active');
+                }
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'file-name-span';
+                nameSpan.textContent = file.name;
+                tab.appendChild(nameSpan);
+                
+                tab.addEventListener('click', () => switchToFile(file.id));
+                
+                tab.addEventListener('dblclick', () => {
+                    nameSpan.style.display = 'none';
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = file.name;
+                    tab.prepend(input);
+                    input.focus();
+                    
+                    const saveName = () => {
+                        const newName = input.value.trim();
+                        if (newName) {
+                            file.name = newName;
+                            const newExt = newName.split('.').pop();
+                            file.language = (newExt === 'js') ? 'javascript' : 'python';
+                        }
+                        renderFileTabs();
+                        switchToFile(file.id);
+                    };
+                    
+                    input.addEventListener('blur', saveName);
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') input.blur();
+                        if (e.key === 'Escape') {
+                           input.value = file.name;
+                           input.blur();
+                        }
+                    });
+                });
+                
+                fileBar.appendChild(tab);
+            });
+        }
+        
+        addFileButton.addEventListener('click', () => createNewFile('new_script.py'));
+
+        // --- Логика выполнения кода ---
+        function printToTerminal(message, type = 'log') {
+            const line = document.createElement('div');
+            line.textContent = String(message).trimEnd();
+            line.classList.add(type);
+            terminalOutputDiv.appendChild(line);
+            terminalOutputDiv.scrollTop = terminalOutputDiv.scrollHeight;
+        }
+
+        async function runCode() {
+            // --- УЛУЧШЕННЫЕ ПРОВЕРКИ ---
+            if (runButton.disabled) {
+                printToTerminal("Пожалуйста, подождите окончания инициализации.", "info");
+                return;
+            }
+            if (!editor) {
+                printToTerminal("Ошибка: Редактор кода не инициализирован.", "error");
+                return;
+            }
+            if (activeFileId === null) {
+                printToTerminal("Ошибка: Нет активного файла для запуска.", "error");
+                return;
+            }
+            
+            const file = files.find(f => f.id === activeFileId);
+            if (!file) {
+                 printToTerminal(`Ошибка: Не удалось найти файл с ID ${activeFileId}.`, "error");
+                return;
+            }
+            
+            if (file.language === 'python' && !pyodide) {
+                printToTerminal("Ошибка: Среда Python еще не готова. Пожалуйста, подождите.", "error");
+                return;
+            }
+
+            terminalOutputDiv.innerHTML = '';
+            
+            if (file.language === 'javascript') {
+                runJavascript(file.content);
+            } else if (file.language === 'python') {
+                await runPython(file.content);
+            }
+        }
+        
+        async function runPython(code) {
+            printToTerminal(`> Выполнение ${files.find(f=>f.id===activeFileId).name}...`, 'info');
+            try {
+                await pyodide.loadPackagesFromImports(code);
+                let result = await pyodide.runPythonAsync(code);
+                if(result !== undefined) {
+                    printToTerminal(result, 'py-result');
+                }
+                 printToTerminal(`> Выполнение завершено.`, 'py-result');
+            } catch(err) {
+                printToTerminal(err.message, 'error');
+            }
+        }
+
+        function runJavascript(code) {
+            printToTerminal(`> Выполнение ${files.find(f=>f.id===activeFileId).name}...`, 'info');
+            const oldLog = console.log;
+            const oldError = console.error;
+            console.log = (...args) => printToTerminal(args.map(a => typeof a ==='object' ? JSON.stringify(a) : a).join(' '),'log');
+            console.error = (...args) => printToTerminal(args.map(a => a.stack || a).join(' '),'error');
+
+            try {
+                new Function(code)();
+                printToTerminal(`> Выполнение завершено.`, 'py-result');
+            } catch (e) {
+                console.error(e);
+            } finally {
+                console.log = oldLog;
+                console.error = oldError;
+            }
+        }
+    </script>
+</body>
+</html>
